@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Link2QR - URL to QR Code Generator</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0a0d12;--bg2:#0f1419;--bg3:#151d27;--bg4:#1c2a38;
+--text:#e2e8f0;--text2:#8899aa;--text3:#5a6d7e;
+--accent:#0ea5e9;--accent2:#67e8f9;--green:#00d68f;--red:#ef4444;
+--border:#1e2d3d;--card:#0f1720;
+}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+
+/* Header */
+.header{text-align:center;padding:40px 20px 30px;background:linear-gradient(135deg,var(--bg2) 0%,var(--bg3) 100%);border-bottom:1px solid var(--border)}
+.logo{font-size:clamp(24px,4vw,36px);font-weight:700;color:var(--accent2);margin-bottom:8px;display:flex;align-items:center;justify-content:center;gap:12px}
+.logo .icon{font-size:1.2em}
+.tagline{color:var(--text2);font-size:16px}
+
+/* Container */
+.container{max-width:800px;margin:0 auto;padding:40px 20px}
+
+/* Input Section */
+.input-section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;margin-bottom:32px;text-align:center}
+.input-label{font-size:18px;font-weight:600;margin-bottom:16px;color:var(--text)}
+.url-input{width:100%;max-width:500px;padding:16px 20px;font-size:16px;background:var(--bg3);border:2px solid var(--border);border-radius:12px;color:var(--text);transition:all 0.3s;font-family:inherit}
+.url-input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(14,165,233,0.1)}
+.url-input::placeholder{color:var(--text3)}
+
+/* Buttons */
+.btn-group{display:flex;gap:12px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+.btn{padding:12px 24px;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.25s;display:inline-flex;align-items:center;gap:8px;font-family:inherit}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#38bdf8;transform:translateY(-2px);box-shadow:0 4px 20px rgba(14,165,233,0.3)}
+.btn-secondary{background:var(--bg4);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:var(--bg3);border-color:var(--accent);transform:translateY(-2px)}
+.btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+
+/* QR Section */
+.qr-section{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;text-align:center;display:none}
+.qr-section.active{display:block;animation:fadeIn 0.3s ease-out}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.qr-container{display:inline-block;padding:20px;background:#fff;border-radius:12px;margin:20px 0;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
+.qr-info{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;margin:20px 0;font-family:'Courier New',monospace;font-size:14px;color:var(--text2);word-break:break-all}
+
+/* Size Options */
+.size-options{display:flex;gap:8px;justify-content:center;margin:20px 0;flex-wrap:wrap}
+.size-btn{padding:8px 16px;background:var(--bg4);color:var(--text2);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:all 0.2s;font-size:14px}
+.size-btn:hover,.size-btn.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* Quality Options */
+.quality-section{margin:20px 0}
+.quality-label{display:block;margin-bottom:8px;color:var(--text2);font-size:14px}
+.quality-slider{width:200px;margin:0 auto;display:block}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:16px;margin-top:32px;max-width:400px;margin-left:auto;margin-right:auto}
+.stat{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.stat-value{font-size:20px;font-weight:700;color:var(--accent2);display:block}
+.stat-label{font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px}
+
+/* Footer */
+.footer{text-align:center;padding:40px 20px;color:var(--text3);font-size:14px;border-top:1px solid var(--border);margin-top:40px}
+.footer a{color:var(--accent2);text-decoration:none}
+
+/* Mobile */
+@media(max-width:480px){
+.input-section,.qr-section{padding:20px}
+.btn-group{flex-direction:column;align-items:center}
+.btn{width:200px;justify-content:center}
+}
+
+/* Toast */
+.toast{position:fixed;bottom:20px;right:20px;background:var(--green);color:#fff;padding:12px 20px;border-radius:10px;font-weight:600;transform:translateX(400px);transition:transform 0.3s;z-index:1000}
+.toast.show{transform:translateX(0)}
+.toast.error{background:var(--red)}
+</style>
+</head>
+<body>
+
+<div class="header">
+<h1 class="logo"><span class="icon">📱</span> Link2QR</h1>
+<p class="tagline">Generate QR codes from any URL instantly</p>
+</div>
+
+<div class="container">
+<div class="input-section">
+<label class="input-label">Enter URL or Text</label>
+<input type="url" id="urlInput" class="url-input" placeholder="https://example.com" autocomplete="url">
+<div class="btn-group">
+<button id="generateBtn" class="btn btn-primary">📱 Generate QR Code</button>
+<button id="clearBtn" class="btn btn-secondary">🗑️ Clear</button>
+</div>
+</div>
+
+<div id="qrSection" class="qr-section">
+<h3 style="margin-bottom:16px">Your QR Code</h3>
+<div class="qr-container">
+<canvas id="qrCanvas"></canvas>
+</div>
+<div id="qrInfo" class="qr-info"></div>
+
+<div class="size-options">
+<div class="size-btn active" data-size="256">Small (256px)</div>
+<div class="size-btn" data-size="512">Medium (512px)</div>
+<div class="size-btn" data-size="1024">Large (1024px)</div>
+</div>
+
+<div class="btn-group">
+<button id="downloadBtn" class="btn btn-primary">💾 Download PNG</button>
+<button id="copyBtn" class="btn btn-secondary">📋 Copy Image</button>
+<button id="newBtn" class="btn btn-secondary">🔄 Generate New</button>
+</div>
+
+<div class="stats">
+<div class="stat">
+<span id="sizeDisplay" class="stat-value">256px</span>
+<span class="stat-label">Size</span>
+</div>
+<div class="stat">
+<span id="charCount" class="stat-value">0</span>
+<span class="stat-label">Characters</span>
+</div>
+</div>
+</div>
+</div>
+
+<div class="footer">
+<p>Made with ⚡ by RisingForce • <a href="https://github.com/InterSpaceStudios" target="_blank">GitHub</a></p>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script>
+let currentSize = 256;
+let currentUrl = '';
+
+const urlInput = document.getElementById('urlInput');
+const generateBtn = document.getElementById('generateBtn');
+const clearBtn = document.getElementById('clearBtn');
+const qrSection = document.getElementById('qrSection');
+const qrCanvas = document.getElementById('qrCanvas');
+const qrInfo = document.getElementById('qrInfo');
+const downloadBtn = document.getElementById('downloadBtn');
+const copyBtn = document.getElementById('copyBtn');
+const newBtn = document.getElementById('newBtn');
+const sizeDisplay = document.getElementById('sizeDisplay');
+const charCount = document.getElementById('charCount');
+const toast = document.getElementById('toast');
+
+// Size buttons
+document.querySelectorAll('.size-btn').forEach(btn => {
+btn.addEventListener('click', () => {
+document.querySelector('.size-btn.active').classList.remove('active');
+btn.classList.add('active');
+currentSize = parseInt(btn.dataset.size);
+sizeDisplay.textContent = currentSize + 'px';
+if (currentUrl) generateQR(currentUrl);
+});
+});
+
+// Input handling
+urlInput.addEventListener('input', (e) => {
+const value = e.target.value;
+charCount.textContent = value.length;
+if (value.length > 0 && value.length < 3000) {
+generateBtn.disabled = false;
+} else {
+generateBtn.disabled = true;
+}
+});
+
+urlInput.addEventListener('keypress', (e) => {
+if (e.key === 'Enter' && !generateBtn.disabled) {
+generateQR();
+}
+});
+
+// Button events
+generateBtn.addEventListener('click', () => generateQR());
+clearBtn.addEventListener('click', clearAll);
+downloadBtn.addEventListener('click', downloadQR);
+copyBtn.addEventListener('click', copyQR);
+newBtn.addEventListener('click', () => {
+qrSection.classList.remove('active');
+urlInput.focus();
+});
+
+function generateQR(url = null) {
+const inputUrl = url || urlInput.value.trim();
+if (!inputUrl) {
+showToast('Please enter a URL or text', true);
+return;
+}
+
+currentUrl = inputUrl;
+generateBtn.disabled = true;
+generateBtn.textContent = '⏳ Generating...';
+
+// Add protocol if missing for URLs
+let finalUrl = inputUrl;
+if (isValidUrl(inputUrl) && !inputUrl.startsWith('http')) {
+finalUrl = 'https://' + inputUrl;
+}
+
+QRCode.toCanvas(qrCanvas, finalUrl, {
+width: currentSize,
+margin: 1,
+color: {
+dark: '#000',
+light: '#fff'
+}
+}, (error) => {
+generateBtn.disabled = false;
+generateBtn.textContent = '📱 Generate QR Code';
+
+if (error) {
+showToast('Error generating QR code: ' + error.message, true);
+return;
+}
+
+qrSection.classList.add('active');
+qrInfo.textContent = finalUrl;
+showToast('QR code generated successfully!');
+qrSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+}
+
+function isValidUrl(string) {
+try {
+new URL(string.startsWith('http') ? string : 'https://' + string);
+return true;
+} catch (_) {
+return false;
+}
+}
+
+function clearAll() {
+urlInput.value = '';
+currentUrl = '';
+charCount.textContent = '0';
+generateBtn.disabled = true;
+qrSection.classList.remove('active');
+urlInput.focus();
+}
+
+function downloadQR() {
+const link = document.createElement('a');
+link.download = 'qrcode_' + currentSize + 'px.png';
+link.href = qrCanvas.toDataURL();
+link.click();
+showToast('QR code downloaded!');
+}
+
+async function copyQR() {
+try {
+qrCanvas.toBlob(async (blob) => {
+await navigator.clipboard.write([
+new ClipboardItem({ 'image/png': blob })
+]);
+showToast('QR code copied to clipboard!');
+});
+} catch (err) {
+showToast('Copy failed. Try downloading instead.', true);
+}
+}
+
+function showToast(message, isError = false) {
+toast.textContent = message;
+toast.className = 'toast' + (isError ? ' error' : '') + ' show';
+setTimeout(() => {
+toast.classList.remove('show');
+}, 3000);
+}
+
+// Focus input on load
+urlInput.focus();
+
+// Handle paste
+urlInput.addEventListener('paste', (e) => {
+setTimeout(() => {
+const value = e.target.value;
+if (value && !generateBtn.disabled) {
+setTimeout(() => generateQR(), 100);
+}
+}, 10);
+});
+
+// Sample URLs for testing (can be removed)
+const sampleUrls = [
+'https://github.com/InterSpaceStudios',
+'https://discord.gg/example',
+'https://youtube.com/watch?v=example'
+];
+
+// Easter egg: double click logo for sample
+document.querySelector('.logo').addEventListener('dblclick', () => {
+const randomUrl = sampleUrls[Math.floor(Math.random() * sampleUrls.length)];
+urlInput.value = randomUrl;
+charCount.textContent = randomUrl.length;
+generateBtn.disabled = false;
+generateQR(randomUrl);
+});
+</script>
+
+</body>
+</html>
